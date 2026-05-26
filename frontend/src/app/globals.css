@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased transition-colors duration-200;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  html.dark body { @apply bg-slate-950 text-slate-100; }
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { @apply bg-gray-100 dark:bg-slate-900; }
+::-webkit-scrollbar-thumb { @apply bg-gray-300 dark:bg-slate-700 rounded; }
+
+/* Shimmer loader */
+@keyframes shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
+.shimmer-load {
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background-size: 600px 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+html.dark .shimmer-load {
+  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  background-size: 600px 100%;
+}
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 0.7s linear infinite; }

@@ -1,0 +1,43 @@
+CREATE TABLE Users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  userid VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  name VARCHAR(255),
+  role VARCHAR(50) DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Owners (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  contact VARCHAR(255),
+  address VARCHAR(255),
+  email VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Vehicles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  plate_number VARCHAR(50) NOT NULL,
+  make VARCHAR(100),
+  model VARCHAR(100),
+  color VARCHAR(50),
+  year INT,
+  owner_id INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES Owners(id) ON DELETE SET NULL
+);
+
+CREATE TABLE Stickers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT,
+  sticker_number VARCHAR(100) NOT NULL,
+  issue_date DATE,
+  expiry_date DATE,
+  status VARCHAR(20) DEFAULT 'active',
+  notes TEXT,
+  created_by INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vehicle_id) REFERENCES Vehicles(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES Users(id) ON DELETE SET NULL
+);
