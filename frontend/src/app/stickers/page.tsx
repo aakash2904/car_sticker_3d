@@ -214,7 +214,7 @@ export default function StickersPage() {
       {/* Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 dark:border-slate-700">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
               <h2 className="font-semibold text-gray-900 dark:text-white">{editing ? 'Edit Sticker' : 'New Sticker'}</h2>
               <button onClick={closeModal} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
