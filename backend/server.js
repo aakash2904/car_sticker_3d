@@ -241,14 +241,23 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 // ─── Reports ──────────────────────────────────────────────────────────────────
 app.get('/api/reports/monthly', authMiddleware, async (req, res) => {
   try {
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const { startDate, endDate } = req.query;
     
-    const { data, error } = await supabase
-      .from('stickers')
-      .select('issue_date')
-      .gte('issue_date', oneYearAgo.toISOString().split('T')[0]);
+    let query = supabase.from('stickers').select('issue_date');
+    
+    if (startDate) {
+      query = query.gte('issue_date', startDate);
+    } else {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      query = query.gte('issue_date', oneYearAgo.toISOString().split('T')[0]);
+    }
+
+    if (endDate) {
+      query = query.lte('issue_date', endDate);
+    }
       
+    const { data, error } = await query;
     if (error) throw error;
     
     const grouped = data.reduce((acc, curr) => {
@@ -264,6 +273,30 @@ app.get('/api/reports/monthly', authMiddleware, async (req, res) => {
     }));
     
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/reports/export', authMiddleware, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    let query = supabase.from('vw_stickers_details').select('*');
+    
+    if (startDate) {
+      query = query.gte('issue_date', startDate);
+    }
+    if (endDate) {
+      query = query.lte('issue_date', endDate);
+    }
+    
+    query = query.order('created_at', { ascending: false });
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -302,4 +335,4 @@ app.post('/api/users', authMiddleware, async (req, res) => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(\`Server running on port \${PORT}\`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

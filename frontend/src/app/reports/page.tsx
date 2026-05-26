@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Download, Filter } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -13,13 +14,49 @@ export default function ReportsPage() {
   const [monthly, setMonthly] = useState<any[]>([]);
   const [stats,   setStats]   = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  useEffect(() => {
-    Promise.all([api.monthlyReport(), api.stats()])
+  const fetchData = () => {
+    setLoading(true);
+    const params: any = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    Promise.all([api.monthlyReport(params), api.stats()])
       .then(([m, s]) => { setMonthly(m); setStats(s); })
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params: any = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      
+      const data = await api.exportReport(params);
+      
+      // Convert to worksheet
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Stickers");
+      
+      // Save file
+      XLSX.writeFile(wb, `Stickers_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export data.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const pieData = stats ? [
     { name: 'Active',        value: stats.active_stickers },
@@ -29,11 +66,46 @@ export default function ReportsPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-blue-600" /> Reports & Analytics
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">Overview of sticker operations</p>
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600" /> Reports & Analytics
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">Overview of sticker operations</p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <input 
+              type="date" 
+              className="text-sm border border-gray-300 dark:border-slate-700 dark:bg-slate-800 rounded-md shadow-sm p-2" 
+              value={startDate} 
+              onChange={e => setStartDate(e.target.value)}
+            />
+            <span className="text-gray-500">to</span>
+            <input 
+              type="date" 
+              className="text-sm border border-gray-300 dark:border-slate-700 dark:bg-slate-800 rounded-md shadow-sm p-2" 
+              value={endDate} 
+              onChange={e => setEndDate(e.target.value)}
+            />
+            <button 
+              onClick={fetchData}
+              className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1 transition-colors"
+            >
+              <Filter className="w-4 h-4" /> Filter
+            </button>
+          </div>
+          
+          <button 
+            onClick={handleExport}
+            disabled={exporting}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm flex items-center gap-2 transition-colors"
+          >
+            <Download className="w-4 h-4" /> 
+            {exporting ? 'Exporting...' : 'Export to Excel'}
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}

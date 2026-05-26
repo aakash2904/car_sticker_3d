@@ -26,7 +26,10 @@ export const api = {
   login: (userid: string, password: string) =>
     req('/api/login', { method: 'POST', body: JSON.stringify({ userid, password }) }),
   stats: () => req('/api/dashboard/stats'),
-  monthlyReport: () => req('/api/reports/monthly'),
+  monthlyReport: (p?: Record<string, string>) => 
+    req('/api/reports/monthly' + (p && Object.keys(p).length ? '?' + new URLSearchParams(p) : '')),
+  exportReport: (p?: Record<string, string>) =>
+    req('/api/reports/export' + (p && Object.keys(p).length ? '?' + new URLSearchParams(p) : '')),
   getStickers: (p?: Record<string, string>) =>
     req('/api/stickers' + (p ? '?' + new URLSearchParams(p) : '')),
   createSticker: (d: object) => req('/api/stickers', { method: 'POST', body: JSON.stringify(d) }),
