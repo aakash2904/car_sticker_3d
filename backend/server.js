@@ -2,9 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const pool = require('./mysqlClient');
+const supabase = require('./supabaseClient');
 const dotenv = require('dotenv');
-const path = require('path');
 
 dotenv.config();
 
@@ -28,12 +27,17 @@ function authMiddleware(req, res, next) {
 app.post('/api/login', async (req, res) => {
   try {
     const { userid, password } = req.body;
-    const [rows] = await pool.execute('SELECT * FROM Users WHERE userid = ?', [userid]);
+    
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('userid', userid)
+      .single();
 
-    if (!rows.length)
+    if (error || !user) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-    const user = rows[0];
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -54,33 +58,23 @@ app.get('/api/stickers', authMiddleware, async (req, res) => {
     const { search, status, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = ` WHERE 1=1`;
-    const params = [];
+    let query = supabase.from('vw_stickers_details').select('*', { count: 'exact' });
 
     if (search) {
-      whereClause += ` AND (v.plate_number LIKE ? OR o.name LIKE ? OR s.sticker_number LIKE ?)`;
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam);
+      query = query.or(`plate_number.ilike.%${search}%,owner_name.ilike.%${search}%,sticker_number.ilike.%${search}%`);
     }
     if (status) {
-      whereClause += ` AND s.status = ?`;
-      params.push(status);
+      query = query.eq('status', status);
     }
 
-    const countQuery = `SELECT COUNT(*) as total FROM Stickers s LEFT JOIN Vehicles v ON s.vehicle_id = v.id LEFT JOIN Owners o ON v.owner_id = o.id` + whereClause;
-    const [countResult] = await pool.execute(countQuery, params);
+    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
-    // Provide limit and offset as numbers
-    const dataQuery = `SELECT s.*, v.plate_number, v.make, v.model, v.color, v.year, o.name AS owner_name, o.contact 
-                 FROM Stickers s
-                 LEFT JOIN Vehicles v ON s.vehicle_id = v.id
-                 LEFT JOIN Owners o ON v.owner_id = o.id` + whereClause + ` ORDER BY s.created_at DESC LIMIT ? OFFSET ?`;
-    
-    const [result] = await pool.execute(dataQuery, [...params, parseInt(limit, 10), parseInt(offset, 10)]);
+    const { data, count, error } = await query;
+    if (error) throw error;
 
     res.json({
-      stickers: result,
-      total: countResult[0].total,
+      stickers: data,
+      total: count,
       page: parseInt(page),
       limit: parseInt(limit),
     });
@@ -92,13 +86,18 @@ app.get('/api/stickers', authMiddleware, async (req, res) => {
 app.post('/api/stickers', authMiddleware, async (req, res) => {
   try {
     const { vehicle_id, sticker_number, issue_date, expiry_date, status, notes } = req.body;
-    const [result] = await pool.execute(
-      `INSERT INTO Stickers (vehicle_id, sticker_number, issue_date, expiry_date, status, notes, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-       [vehicle_id, sticker_number, issue_date, expiry_date, status || 'active', notes, req.user.id]
-    );
-    const [inserted] = await pool.execute('SELECT * FROM Stickers WHERE id = ?', [result.insertId]);
-    res.json(inserted[0]);
+    
+    const { data, error } = await supabase
+      .from('stickers')
+      .insert([{
+        vehicle_id, sticker_number, issue_date, expiry_date, 
+        status: status || 'active', notes, created_by: req.user.id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -107,12 +106,16 @@ app.post('/api/stickers', authMiddleware, async (req, res) => {
 app.put('/api/stickers/:id', authMiddleware, async (req, res) => {
   try {
     const { sticker_number, issue_date, expiry_date, status, notes } = req.body;
-    await pool.execute(
-      `UPDATE Stickers SET sticker_number=?, issue_date=?, expiry_date=?, status=?, notes=? WHERE id=?`,
-      [sticker_number, issue_date, expiry_date, status, notes, req.params.id]
-    );
-    const [updated] = await pool.execute('SELECT * FROM Stickers WHERE id = ?', [req.params.id]);
-    res.json(updated[0]);
+    
+    const { data, error } = await supabase
+      .from('stickers')
+      .update({ sticker_number, issue_date, expiry_date, status, notes })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -120,7 +123,8 @@ app.put('/api/stickers/:id', authMiddleware, async (req, res) => {
 
 app.delete('/api/stickers/:id', authMiddleware, async (req, res) => {
   try {
-    await pool.execute('DELETE FROM Stickers WHERE id = ?', [req.params.id]);
+    const { error } = await supabase.from('stickers').delete().eq('id', req.params.id);
+    if (error) throw error;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -131,16 +135,19 @@ app.delete('/api/stickers/:id', authMiddleware, async (req, res) => {
 app.get('/api/vehicles', authMiddleware, async (req, res) => {
   try {
     const { search } = req.query;
-    let whereClause = ` WHERE 1=1`;
-    const params = [];
+    
+    let query = supabase.from('vw_vehicles_details').select('*');
+    
     if (search) {
-      whereClause += ` AND (v.plate_number LIKE ? OR o.name LIKE ?)`;
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam);
+      query = query.or(`plate_number.ilike.%${search}%,owner_name.ilike.%${search}%`);
     }
-    const query = `SELECT v.*, o.name AS owner_name, o.contact FROM Vehicles v LEFT JOIN Owners o ON v.owner_id = o.id` + whereClause + ` ORDER BY v.created_at DESC`;
-    const [result] = await pool.execute(query, params);
-    res.json(result);
+    
+    query = query.order('created_at', { ascending: false });
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -149,13 +156,15 @@ app.get('/api/vehicles', authMiddleware, async (req, res) => {
 app.post('/api/vehicles', authMiddleware, async (req, res) => {
   try {
     const { plate_number, make, model, color, year, owner_id } = req.body;
-    const [result] = await pool.execute(
-      `INSERT INTO Vehicles (plate_number, make, model, color, year, owner_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-       [plate_number, make, model, color, year, owner_id]
-    );
-    const [inserted] = await pool.execute('SELECT * FROM Vehicles WHERE id = ?', [result.insertId]);
-    res.json(inserted[0]);
+    
+    const { data, error } = await supabase
+      .from('vehicles')
+      .insert([{ plate_number, make, model, color, year, owner_id }])
+      .select()
+      .single();
+      
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -164,8 +173,9 @@ app.post('/api/vehicles', authMiddleware, async (req, res) => {
 // ─── Owners Routes ────────────────────────────────────────────────────────────
 app.get('/api/owners', authMiddleware, async (req, res) => {
   try {
-    const [result] = await pool.execute('SELECT * FROM Owners ORDER BY name');
-    res.json(result);
+    const { data, error } = await supabase.from('owners').select('*').order('name');
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -174,13 +184,15 @@ app.get('/api/owners', authMiddleware, async (req, res) => {
 app.post('/api/owners', authMiddleware, async (req, res) => {
   try {
     const { name, contact, address, email } = req.body;
-    const [result] = await pool.execute(
-      `INSERT INTO Owners (name, contact, address, email, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-       [name, contact, address, email]
-    );
-    const [inserted] = await pool.execute('SELECT * FROM Owners WHERE id = ?', [result.insertId]);
-    res.json(inserted[0]);
+    
+    const { data, error } = await supabase
+      .from('owners')
+      .insert([{ name, contact, address, email }])
+      .select()
+      .single();
+      
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -189,16 +201,38 @@ app.post('/api/owners', authMiddleware, async (req, res) => {
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
   try {
-    const [result] = await pool.execute(`
-      SELECT 
-        (SELECT COUNT(*) FROM Stickers) AS total_stickers,
-        (SELECT COUNT(*) FROM Stickers WHERE status = 'active') AS active_stickers,
-        (SELECT COUNT(*) FROM Stickers WHERE status = 'expired') AS expired_stickers,
-        (SELECT COUNT(*) FROM Stickers WHERE expiry_date <= DATE_ADD(NOW(), INTERVAL 30 DAY) AND status = 'active') AS expiring_soon,
-        (SELECT COUNT(*) FROM Vehicles) AS total_vehicles,
-        (SELECT COUNT(*) FROM Owners) AS total_owners
-    `);
-    res.json(result[0]);
+    const [
+      { count: totalStickers },
+      { count: activeStickers },
+      { count: expiredStickers },
+      { count: totalVehicles },
+      { count: totalOwners }
+    ] = await Promise.all([
+      supabase.from('stickers').select('*', { count: 'exact', head: true }),
+      supabase.from('stickers').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('stickers').select('*', { count: 'exact', head: true }).eq('status', 'expired'),
+      supabase.from('vehicles').select('*', { count: 'exact', head: true }),
+      supabase.from('owners').select('*', { count: 'exact', head: true })
+    ]);
+
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const dateStr = thirtyDaysFromNow.toISOString().split('T')[0];
+
+    const { count: expiringSoon } = await supabase
+      .from('stickers')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .lte('expiry_date', dateStr);
+
+    res.json({
+      total_stickers: totalStickers,
+      active_stickers: activeStickers,
+      expired_stickers: expiredStickers,
+      expiring_soon: expiringSoon,
+      total_vehicles: totalVehicles,
+      total_owners: totalOwners
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -207,13 +241,28 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 // ─── Reports ──────────────────────────────────────────────────────────────────
 app.get('/api/reports/monthly', authMiddleware, async (req, res) => {
   try {
-    const [result] = await pool.execute(`
-      SELECT DATE_FORMAT(issue_date, '%Y-%m') AS month, COUNT(*) AS count
-      FROM Stickers
-      WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-      GROUP BY DATE_FORMAT(issue_date, '%Y-%m')
-      ORDER BY month
-    `);
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    const { data, error } = await supabase
+      .from('stickers')
+      .select('issue_date')
+      .gte('issue_date', oneYearAgo.toISOString().split('T')[0]);
+      
+    if (error) throw error;
+    
+    const grouped = data.reduce((acc, curr) => {
+      if (!curr.issue_date) return acc;
+      const month = curr.issue_date.substring(0, 7);
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const result = Object.keys(grouped).sort().map(month => ({
+      month,
+      count: grouped[month]
+    }));
+    
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -224,8 +273,9 @@ app.get('/api/reports/monthly', authMiddleware, async (req, res) => {
 app.get('/api/users', authMiddleware, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   try {
-    const [result] = await pool.execute('SELECT id, userid, name, role, created_at FROM Users');
-    res.json(result);
+    const { data, error } = await supabase.from('users').select('id, userid, name, role, created_at');
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -236,13 +286,15 @@ app.post('/api/users', authMiddleware, async (req, res) => {
   try {
     const { userid, password, name, role } = req.body;
     const hashed = await bcrypt.hash(password, 10);
-    const [result] = await pool.execute(
-      `INSERT INTO Users (userid, password, name, role, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-       [userid, hashed, name, role || 'user']
-    );
-    const [inserted] = await pool.execute('SELECT id, userid, name, role, created_at FROM Users WHERE id = ?', [result.insertId]);
-    res.json(inserted[0]);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ userid, password: hashed, name, role: role || 'user' }])
+      .select('id, userid, name, role, created_at')
+      .single();
+      
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
