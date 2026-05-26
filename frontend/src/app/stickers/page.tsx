@@ -243,77 +243,76 @@ export default function StickersPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {!editing && (
                   <>
-                    <div className="col-span-2">
-                      <h3 className="text-sm font-semibold border-b pb-1 mb-2 mt-2">Vehicle Details</h3>
+                    <div className="col-span-3">
+                      <h3 className="text-sm font-semibold border-b pb-1 mb-1 mt-1">Vehicle Details</h3>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Plate Number *</label>
                       <input value={form.plate_number} onChange={e => setForm({...form, plate_number: e.target.value})}
                         placeholder="ABC-1234"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Make</label>
                       <input value={form.make} onChange={e => setForm({...form, make: e.target.value})} placeholder="Toyota"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Model</label>
                       <input value={form.model} onChange={e => setForm({...form, model: e.target.value})} placeholder="Corolla"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Color</label>
-                        <input value={form.color} onChange={e => setForm({...form, color: e.target.value})} placeholder="Silver"
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Year</label>
-                        <input value={form.year} onChange={e => setForm({...form, year: e.target.value})} placeholder="2023" type="number"
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Color</label>
+                      <input value={form.color} onChange={e => setForm({...form, color: e.target.value})} placeholder="Silver"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                     </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Year</label>
+                      <input value={form.year} onChange={e => setForm({...form, year: e.target.value})} placeholder="2023" type="number"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    </div>
+                    <div></div> {/* Spacer */}
                   </>
                 )}
 
-                <div className="col-span-2">
-                  <h3 className="text-sm font-semibold border-b pb-1 mb-2 mt-4">Sticker Details</h3>
+                <div className="col-span-3">
+                  <h3 className="text-sm font-semibold border-b pb-1 mb-1 mt-2">Sticker Details</h3>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Sticker No *</label>
                   <input value={form.sticker_number} onChange={e => setForm({...form, sticker_number: e.target.value})}
                     placeholder="STK-001"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Issue Date</label>
+                  <input type="date" value={form.issue_date} onChange={e => setForm({...form, issue_date: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Expiry Date</label>
+                  <input type="date" value={form.expiry_date} onChange={e => setForm({...form, expiry_date: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Status</label>
                   <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
                     <option value="active">Active</option>
                     <option value="expired">Expired</option>
                     <option value="suspended">Suspended</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Issue Date</label>
-                  <input type="date" value={form.issue_date} onChange={e => setForm({...form, issue_date: e.target.value})}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
+                  <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={1}
+                    placeholder="Optional notes…"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Expiry Date</label>
-                  <input type="date" value={form.expiry_date} onChange={e => setForm({...form, expiry_date: e.target.value})}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Notes</label>
-                <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2}
-                  placeholder="Optional notes…"
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none" />
               </div>
             </div>
             <div className="flex flex-shrink-0 gap-2 px-5 py-4 border-t border-gray-100 dark:border-slate-700">
