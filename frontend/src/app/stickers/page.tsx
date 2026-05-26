@@ -8,7 +8,6 @@ interface StickerRow {
   issue_date: string; expiry_date: string; status: string; notes: string;
   plate_number: string; make: string; model: string; owner_name: string;
 }
-interface Vehicle { id: number; plate_number: string; make: string; model: string; }
 
 const STATUS_BADGE: Record<string, string> = {
   active:    'bg-green-50 text-green-700 border border-green-200',
@@ -16,11 +15,14 @@ const STATUS_BADGE: Record<string, string> = {
   suspended: 'bg-amber-50 text-amber-700 border border-amber-200',
 };
 
-const EMPTY_FORM = { vehicle_id: '', sticker_number: '', issue_date: '', expiry_date: '', status: 'active', notes: '' };
+const EMPTY_FORM = { 
+  member_code: '', owner_id: '', owner_name: '',
+  plate_number: '', make: '', model: '', color: '', year: '',
+  sticker_number: '', issue_date: '', expiry_date: '', status: 'active', notes: '' 
+};
 
 export default function StickersPage() {
   const [rows,     setRows]     = useState<StickerRow[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [total,    setTotal]    = useState(0);
   const [page,     setPage]     = useState(1);
   const [search,   setSearch]   = useState('');
@@ -46,20 +48,37 @@ export default function StickersPage() {
   }, [page, search, status]);
 
   useEffect(() => { fetch(); }, [fetch]);
-  useEffect(() => { api.getVehicles().then(setVehicles).catch(() => {}); }, []);
 
   const openAdd  = () => { setEditing(null); setForm({ ...EMPTY_FORM }); setModal(true); };
   const openEdit = (r: StickerRow) => {
     setEditing(r);
-    setForm({ vehicle_id: String(r.vehicle_id), sticker_number: r.sticker_number,
+    setForm({ 
+      member_code: '', owner_id: '', owner_name: r.owner_name,
+      plate_number: r.plate_number || '', make: r.make || '', model: r.model || '', color: '', year: '',
+      sticker_number: r.sticker_number,
       issue_date: r.issue_date?.slice(0,10) || '', expiry_date: r.expiry_date?.slice(0,10) || '',
-      status: r.status, notes: r.notes || '' });
+      status: r.status, notes: r.notes || '' 
+    });
     setModal(true);
   };
   const closeModal = () => { setModal(false); setEditing(null); };
 
+  const verifyMember = async () => {
+    if (!form.member_code) return;
+    try {
+      const data = await api.lookupMember(form.member_code);
+      setForm({ ...form, owner_id: data.id, owner_name: data.name });
+    } catch (e: any) {
+      alert(e.message || 'Member not found');
+      setForm({ ...form, owner_id: '', owner_name: '' });
+    }
+  };
+
   const handleSave = async () => {
-    if (!form.vehicle_id || !form.sticker_number) { alert('Vehicle and Sticker Number are required'); return; }
+    if (!form.sticker_number || (!editing && !form.plate_number)) { 
+      alert('Plate Number and Sticker Number are required'); 
+      return; 
+    }
     setSaving(true);
     try {
       editing ? await api.updateSticker(editing.id, form) : await api.createSticker(form);
@@ -203,15 +222,67 @@ export default function StickersPage() {
               </button>
             </div>
             <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Vehicle *</label>
-                <select value={form.vehicle_id} onChange={e => setForm({...form, vehicle_id: e.target.value})}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                  <option value="">— Select vehicle —</option>
-                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number} – {v.make} {v.model}</option>)}
-                </select>
-              </div>
+              
+              {!editing && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg">
+                  <label className="block text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-2">Verify Member</label>
+                  <div className="flex gap-2">
+                    <input value={form.member_code} onChange={e => setForm({...form, member_code: e.target.value})}
+                      placeholder="Enter Member Code..."
+                      className="flex-1 px-3 py-2 border border-blue-200 dark:border-blue-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-800" />
+                    <button onClick={verifyMember} type="button"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                      Verify
+                    </button>
+                  </div>
+                  {form.owner_name && (
+                    <p className="mt-2 text-sm text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                      ✓ Verified: <span className="font-semibold">{form.owner_name}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
+                {!editing && (
+                  <>
+                    <div className="col-span-2">
+                      <h3 className="text-sm font-semibold border-b pb-1 mb-2 mt-2">Vehicle Details</h3>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Plate Number *</label>
+                      <input value={form.plate_number} onChange={e => setForm({...form, plate_number: e.target.value})}
+                        placeholder="ABC-1234"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Make</label>
+                      <input value={form.make} onChange={e => setForm({...form, make: e.target.value})} placeholder="Toyota"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Model</label>
+                      <input value={form.model} onChange={e => setForm({...form, model: e.target.value})} placeholder="Corolla"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Color</label>
+                        <input value={form.color} onChange={e => setForm({...form, color: e.target.value})} placeholder="Silver"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Year</label>
+                        <input value={form.year} onChange={e => setForm({...form, year: e.target.value})} placeholder="2023" type="number"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="col-span-2">
+                  <h3 className="text-sm font-semibold border-b pb-1 mb-2 mt-4">Sticker Details</h3>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">Sticker No *</label>
                   <input value={form.sticker_number} onChange={e => setForm({...form, sticker_number: e.target.value})}

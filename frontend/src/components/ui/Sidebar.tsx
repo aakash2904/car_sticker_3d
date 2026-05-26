@@ -15,7 +15,7 @@ const NAV_SECTIONS = [
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/stickers',  label: 'Stickers',  icon: Sticker },
-      { href: '/vehicles',  label: 'Vehicles',  icon: Car },
+      { href: '/members',   label: 'Members',   icon: Users },
       { href: '/owners',    label: 'Owners',    icon: Users },
     ],
   },

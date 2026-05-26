@@ -52,6 +52,28 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// ─── Member Lookup ────────────────────────────────────────────────────────────
+app.get('/api/members/lookup', authMiddleware, async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ error: 'Member code is required' });
+    
+    const { data, error } = await supabase
+      .from('owners')
+      .select('*')
+      .eq('member_code', code)
+      .single();
+    
+    if (error || !data) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+    
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Stickers Routes ──────────────────────────────────────────────────────────
 app.get('/api/stickers', authMiddleware, async (req, res) => {
   try {
@@ -85,12 +107,26 @@ app.get('/api/stickers', authMiddleware, async (req, res) => {
 
 app.post('/api/stickers', authMiddleware, async (req, res) => {
   try {
-    const { vehicle_id, sticker_number, issue_date, expiry_date, status, notes } = req.body;
+    const { sticker_number, issue_date, expiry_date, status, notes,
+            plate_number, make, model, color, year, owner_id, vehicle_id } = req.body;
+    
+    let vid = vehicle_id;
+    
+    // If no vehicle_id provided, create the vehicle first
+    if (!vid && plate_number) {
+      const { data: veh, error: vehErr } = await supabase
+        .from('vehicles')
+        .insert([{ plate_number, make, model, color, year, owner_id }])
+        .select()
+        .single();
+      if (vehErr) throw vehErr;
+      vid = veh.id;
+    }
     
     const { data, error } = await supabase
       .from('stickers')
       .insert([{
-        vehicle_id, sticker_number, issue_date, expiry_date, 
+        vehicle_id: vid, sticker_number, issue_date, expiry_date, 
         status: status || 'active', notes, created_by: req.user.id
       }])
       .select()

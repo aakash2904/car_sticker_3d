@@ -39,6 +39,7 @@ export const api = {
     req('/api/vehicles' + (p ? '?' + new URLSearchParams(p) : '')),
   createVehicle: (d: object) => req('/api/vehicles', { method: 'POST', body: JSON.stringify(d) }),
   getOwners: () => req('/api/owners'),
+  lookupMember: (code: string) => req(`/api/members/lookup?code=${encodeURIComponent(code)}`),
   createOwner: (d: object) => req('/api/owners', { method: 'POST', body: JSON.stringify(d) }),
   getUsers: () => req('/api/users'),
   createUser: (d: object) => req('/api/users', { method: 'POST', body: JSON.stringify(d) }),
