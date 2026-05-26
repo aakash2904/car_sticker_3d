@@ -214,14 +214,14 @@ export default function StickersPage() {
       {/* Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 dark:border-slate-700">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col border border-gray-100 dark:border-slate-700">
+            <div className="flex flex-shrink-0 items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
               <h2 className="font-semibold text-gray-900 dark:text-white">{editing ? 'Edit Sticker' : 'New Sticker'}</h2>
               <button onClick={closeModal} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
               
               {!editing && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg">
@@ -316,7 +316,7 @@ export default function StickersPage() {
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none" />
               </div>
             </div>
-            <div className="flex gap-2 px-5 py-4 border-t border-gray-100 dark:border-slate-700">
+            <div className="flex flex-shrink-0 gap-2 px-5 py-4 border-t border-gray-100 dark:border-slate-700">
               <button onClick={closeModal} className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 rounded-lg text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">Cancel</button>
               <button onClick={handleSave} disabled={saving}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors">
