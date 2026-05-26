@@ -17,6 +17,7 @@ export default function ReportsPage() {
   const [exporting, setExporting] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [tableData, setTableData] = useState<any[]>([]);
 
   const fetchData = () => {
     setLoading(true);
@@ -24,8 +25,8 @@ export default function ReportsPage() {
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
 
-    Promise.all([api.monthlyReport(params), api.stats()])
-      .then(([m, s]) => { setMonthly(m); setStats(s); })
+    Promise.all([api.monthlyReport(params), api.stats(), api.exportReport(params)])
+      .then(([m, s, t]) => { setMonthly(m); setStats(s); setTableData(t); })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -125,7 +126,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
         {/* Bar chart */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 transition-colors duration-200">
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Monthly Issuance (Last 12 Months)</h2>
@@ -160,6 +161,59 @@ export default function ReportsPage() {
               </PieChart>
             </ResponsiveContainer>
           )}
+        </div>
+      </div>
+
+      {/* Filtered Data Table */}
+      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden transition-colors duration-200">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Detailed Report Data</h2>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Showing {tableData.length} records for the selected period.</p>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-slate-900 text-xs uppercase text-gray-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-700">
+                <th className="px-5 py-3 font-semibold">Sticker No.</th>
+                <th className="px-5 py-3 font-semibold">Plate Number</th>
+                <th className="px-5 py-3 font-semibold">Owner</th>
+                <th className="px-5 py-3 font-semibold">Status</th>
+                <th className="px-5 py-3 font-semibold">Issue Date</th>
+                <th className="px-5 py-3 font-semibold">Expiry Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-700 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-500">Loading data...</td>
+                </tr>
+              ) : tableData.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-500">No records found for this period.</td>
+                </tr>
+              ) : (
+                tableData.map((row: any) => (
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-slate-750 transition-colors">
+                    <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">{row.sticker_number}</td>
+                    <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{row.plate_number || '-'}</td>
+                    <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{row.owner_name || '-'}</td>
+                    <td className="px-5 py-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        row.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        row.status === 'expired' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 dark:text-gray-400">{row.issue_date || '-'}</td>
+                    <td className="px-5 py-3 text-gray-600 dark:text-gray-400">{row.expiry_date || '-'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
